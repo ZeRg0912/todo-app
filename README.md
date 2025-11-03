@@ -56,7 +56,7 @@ todo-app/
 ├── go.mod                          # Go-модуль
 └── README.md                       # Документация и примеры использования
 └── Инструкция_Описание_проекта.pdf # Инстуркция к проекту
-└── LICENSE # MIT license
+└── LICENSE                         # MIT license
 └── .gitignore
 ~~~
 
