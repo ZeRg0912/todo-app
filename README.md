@@ -109,7 +109,7 @@ go mod tidy
 
 ### 3. Сборка
 ~~~
-go build -o todo ./cmd/todo
+go build -o todo.exe ./cmd/todo
 ~~~
 
 ### 4. Запуск приложения
