@@ -41,20 +41,23 @@
 todo-app/
 ├── cmd/
 │ └── todo/
-│ ├── main.go # Точка входа: парсинг аргументов, запуск команд
-│ └── handlers.go # Реализация логики CLI-команд
+│ ├── main.go                       # Точка входа: парсинг аргументов, запуск команд
+│ └── handlers.go                   # Реализация логики CLI-команд
 ├── internal/
 │ ├── todo/
-│ │ ├── task.go # Модель Task
-│ │ └── manager.go # Логика Add, List, Complete, Delete
+│ │ ├── task.go                     # Модель Task
+│ │ └── manager.go                  # Логика Add, List, Complete, Delete
 │ └── storage/
-│ ├── json_storage.go # Функции LoadJSON, SaveJSON
-│ └── csv_storage.go # Функции LoadCSV, SaveCSV
+│ ├── json_storage.go               # Функции LoadJSON, SaveJSON
+│ └── csv_storage.go                # Функции LoadCSV, SaveCSV
 ├── pkg/
 │ └── logging/
-│ └── logger.go # Модуль логирования, уровни и ротация
-├── go.mod # Go-модуль
-└── README.md # Документация и примеры использования
+│ └── logger.go                     # Модуль логирования, уровни и ротация
+├── go.mod                          # Go-модуль
+└── README.md                       # Документация и примеры использования
+└── Инструкция_Описание_проекта.pdf # Инстуркция к проекту
+└── LICENSE # MIT license
+└── .gitignore
 ~~~
 
 ---
