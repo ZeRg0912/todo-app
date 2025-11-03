@@ -98,7 +98,7 @@ ID,Description,Done
 ## 🧰 Установка и запуск
 ### 1. Клонируйте репозиторий
 ~~~
-git clone https://github.com/username/todo-app.git
+git clone https://github.com/ZeRg0912/todo-app.git
 cd todo-app
 ~~~
 
