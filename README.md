@@ -30,7 +30,7 @@
 | `list --filter=all|done|pending` | Показать список задач с фильтром |
 | `complete --id=ID` | Отметить задачу выполненной |
 | `delete --id=ID` | Удалить задачу по ID |
-| `export --format=json|csv --out=файл` | Экспортировать задачи |
+| `export --format=json/csv --out=файл` | Экспортировать задачи |
 | `load --file=файл` | Импортировать задачи |
 | `help` | Вывести справку |
 
