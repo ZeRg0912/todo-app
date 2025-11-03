@@ -172,25 +172,28 @@ func (l *Logger) rotateFile() error {
 		return nil
 	}
 
-	// Close current file
 	if file, ok := l.fileWriter.(*os.File); ok {
 		file.Close()
 	}
 
-	// Rename files
+	ext := filepath.Ext(l.basePath)
+	baseName := l.basePath[:len(l.basePath)-len(ext)]
+
 	for i := 4; i >= 0; i-- {
-		oldPath := l.basePath
-		if i > 0 {
-			oldPath = fmt.Sprintf("%s_%d", l.basePath, i)
+		var oldPath string
+		if i == 0 {
+			oldPath = l.basePath
+		} else {
+			oldPath = fmt.Sprintf("%s_%d%s", baseName, i, ext)
 		}
-		newPath := fmt.Sprintf("%s_%d", l.basePath, i+1)
+
+		newPath := fmt.Sprintf("%s_%d%s", baseName, i+1, ext)
 
 		if _, err := os.Stat(oldPath); err == nil {
 			os.Rename(oldPath, newPath)
 		}
 	}
 
-	// Create new file
 	return l.createFileWriter()
 }
 
