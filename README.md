@@ -1,6 +1,6 @@
 # 📝 To-Do Manager (CLI на Go)
 
-📁 Go 1.23+ 📁 MIT License 📁 Linux / Windows / macOS 📁 Build: passing
+📁 Go 1.23+ 📁 MIT License 📁 Linux / Windows / macOS
 
 ---
 
