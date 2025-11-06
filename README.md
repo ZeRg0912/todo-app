@@ -1,6 +1,8 @@
 # 📝 To-Do Manager (CLI на Go)
 
-📁 Go 1.23+ 📁 MIT License 📁 Linux / Windows / macOS
+![Go Version](https://img.shields.io/badge/Go-1.23%2B-blue)
+![License](https://img.shields.io/badge/License-MIT-green)
+![Version](https://img.shields.io/badge/Version-1.0.0-orange)
 
 ---
 
