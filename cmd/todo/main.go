@@ -6,7 +6,7 @@ import (
 
 	"todo-app/internal/storage"
 	"todo-app/internal/todo"
-	"todo-app/pkg/logging"
+	"github.com/ZeRg0912/logger"
 )
 
 // main is the entry point of the To-Do Manager application.
@@ -25,7 +25,7 @@ import (
 // Tasks are persisted in a JSON file and automatically saved after modifying commands.
 func main() {
 	// Initialize logger - LevelError to console, all levels to file
-	err := logging.InitBoth(logging.LevelError, logging.LevelDebug, "logs/app.log", 10*1024*1024)
+	err := logger.InitBoth(logger.LevelError, logger.LevelDebug, "logs/app.log", 10*1024*1024)
 	if err != nil {
 		// Before nitialize logger all info to console by fmt
 		fmt.Printf("Failed to initialize logger: %v\n", err)
@@ -34,7 +34,7 @@ func main() {
 
 	defer func() {
 		if r := recover(); r != nil {
-			logging.Error("Application panic: %v", r)
+			logger.Error("Application panic: %v", r)
 			os.Exit(1)
 		}
 	}()
@@ -48,13 +48,13 @@ func main() {
 	command := os.Args[1]
 	args := os.Args[2:]
 
-	logging.Info("Command executed: %s %v", command, args)
-	logging.Debug("Full args: %#v", os.Args)
+	logger.Info("Command executed: %s %v", command, args)
+	logger.Debug("Full args: %#v", os.Args)
 
 	// Load current tasks
 	tasks, err := storage.LoadJSON("tasks.json")
 	if err != nil {
-		logging.Error("Failed to load tasks: %v", err)
+		logger.Error("Failed to load tasks: %v", err)
 		os.Exit(1)
 	}
 
@@ -77,7 +77,7 @@ func main() {
 	case "help", "-h", "--help":
 		printUsage()
 	default:
-		logging.Error("Unknown command: %s", command)
+		logger.Error("Unknown command: %s", command)
 		printUsage()
 		os.Exit(1)
 	}
@@ -86,9 +86,9 @@ func main() {
 	if resultTasks != nil {
 		err = storage.SaveJSON("tasks.json", resultTasks)
 		if err != nil {
-			logging.Error("Failed to save tasks: %v", err)
+			logger.Error("Failed to save tasks: %v", err)
 			os.Exit(1)
 		}
-		logging.Info("Tasks saved successfully, total tasks: %d", len(resultTasks))
+		logger.Info("Tasks saved successfully, total tasks: %d", len(resultTasks))
 	}
 }
