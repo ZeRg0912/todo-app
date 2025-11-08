@@ -52,9 +52,9 @@ todo-app/
 │ │ ├── manager.go                    # Логика Add, List, Complete, Delete
 │ │ └── manager_test.go               # Unit-тесты для бизнес-логики
 │ └── storage/
-│ ├── json_storage.go                 # Функции LoadJSON, SaveJSON
-│ ├─── csv_storage.go                 # Функции LoadCSV, SaveCSV
-│ └── storage_test.go                 # Unit-тесты для модуля хранения
+│   ├── json_storage.go               # Функции LoadJSON, SaveJSON
+│   ├─── csv_storage.go               # Функции LoadCSV, SaveCSV
+│   └── storage_test.go               # Unit-тесты для модуля хранения
 ├── go.mod                            # Go-модуль
 ├─── README.md                        # Документация и примеры использования
 ├─── Инструкция_Описание_проекта.pdf  # Инстуркция к проекту
