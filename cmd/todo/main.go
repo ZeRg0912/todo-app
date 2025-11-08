@@ -11,8 +11,14 @@ import (
 )
 
 // main is the entry point of the To-Do Manager application.
-// It initializes the logger, parses command line arguments,
-// and routes to the appropriate command handler.
+// It calls run() and exits with the returned exit code.
+func main() {
+	os.Exit(run())
+}
+
+// run executes the application logic and returns an exit code.
+// Returns 0 on success, 1 on error.
+// This separation allows for better testability of the application logic.
 //
 // The application supports the following commands:
 //   - add: Add a new task
@@ -24,25 +30,24 @@ import (
 //   - help: Show usage information
 //
 // Tasks are persisted in a JSON file and automatically saved after modifying commands.
-func main() {
+func run() int {
 	// Initialize logger - LevelError to console, all levels to file
 	err := logger.InitBoth(logger.LevelError, logger.LevelDebug, "logs/app.log", 10*1024*1024)
 	if err != nil {
-		// Before nitialize logger all info to console by fmt
+		// Before initialize logger all info to console by fmt
 		fmt.Printf("Failed to initialize logger: %v\n", err)
-		os.Exit(1)
+		return 1
 	}
 
 	defer func() {
 		if r := recover(); r != nil {
 			logger.Error("Application panic: %v", r)
-			os.Exit(1)
 		}
 	}()
 
 	if len(os.Args) < 2 {
 		printUsage()
-		os.Exit(1)
+		return 1
 	}
 
 	// Parse args
@@ -56,7 +61,7 @@ func main() {
 	tasks, err := storage.LoadJSON("tasks.json")
 	if err != nil {
 		logger.Error("Failed to load tasks: %v", err)
-		os.Exit(1)
+		return 1
 	}
 
 	var resultTasks []todo.Task
@@ -67,45 +72,46 @@ func main() {
 		resultTasks, err = handleAdd(tasks, args)
 		if err != nil {
 			logger.Error("Add failed: %v", err)
-			os.Exit(1)
+			return 1
 		}
 	case "list":
 		err := handleList(tasks, args)
 		if err != nil {
 			logger.Error("List failed: %v", err)
-			os.Exit(1)
+			return 1
 		}
 	case "complete":
 		resultTasks, err = handleComplete(tasks, args)
 		if err != nil {
 			logger.Error("Complete failed: %v", err)
-			os.Exit(1)
+			return 1
 		}
 	case "delete":
 		resultTasks, err = handleDelete(tasks, args)
 		if err != nil {
 			logger.Error("Delete failed: %v", err)
-			os.Exit(1)
+			return 1
 		}
 	case "export":
 		err := handleExport(tasks, args)
 		if err != nil {
 			logger.Error("Export failed: %v", err)
-			os.Exit(1)
+			return 1
 		}
 	case "load":
 		importedTasks, err := handleLoad(args)
 		if err != nil {
 			logger.Error("Load failed: %v", err)
-			os.Exit(1)
+			return 1
 		}
 		resultTasks = importedTasks
 	case "help", "-h", "--help":
 		printUsage()
+		return 0
 	default:
 		logger.Error("Unknown command: %s", command)
 		printUsage()
-		os.Exit(1)
+		return 1
 	}
 
 	// Save changes if command modified tasks
@@ -113,8 +119,10 @@ func main() {
 		err = storage.SaveJSON("tasks.json", resultTasks)
 		if err != nil {
 			logger.Error("Failed to save tasks: %v", err)
-			os.Exit(1)
+			return 1
 		}
 		logger.Info("Tasks saved successfully, total tasks: %d", len(resultTasks))
 	}
+
+	return 0
 }

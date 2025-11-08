@@ -8,7 +8,11 @@ func TestAdd(t *testing.T) {
 	tasks := []Task{}
 
 	// Test adding first task
-	tasks = Add(tasks, "First task")
+	var err error
+	tasks, err = Add(tasks, "First task")
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
 	if len(tasks) != 1 {
 		t.Errorf("Expected 1 task, got %d", len(tasks))
 	}
@@ -23,7 +27,10 @@ func TestAdd(t *testing.T) {
 	}
 
 	// Test adding second task
-	tasks = Add(tasks, "Second task")
+	tasks, err = Add(tasks, "Second task")
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
 	if len(tasks) != 2 {
 		t.Errorf("Expected 2 tasks, got %d", len(tasks))
 	}
@@ -177,5 +184,116 @@ func TestDeleteEdgeCases(t *testing.T) {
 	_, err = Delete([]Task{}, 1)
 	if err == nil {
 		t.Error("Expected error when deleting from empty list")
+	}
+}
+
+func TestValidateID(t *testing.T) {
+	// Тест: валидный ID
+	if err := ValidateID(1); err != nil {
+		t.Errorf("Expected no error for valid ID 1, got %v", err)
+	}
+
+	// Тест: валидный ID больше MinID
+	if err := ValidateID(100); err != nil {
+		t.Errorf("Expected no error for valid ID 100, got %v", err)
+	}
+
+	// Тест: невалидный ID (меньше MinID)
+	if err := ValidateID(0); err == nil {
+		t.Error("Expected error for ID 0")
+	}
+
+	// Тест: невалидный ID (отрицательный)
+	if err := ValidateID(-1); err == nil {
+		t.Error("Expected error for negative ID")
+	}
+}
+
+func TestValidateDescription(t *testing.T) {
+	// Тест: валидное описание
+	if err := ValidateDescription("Valid task description"); err != nil {
+		t.Errorf("Expected no error for valid description, got %v", err)
+	}
+
+	// Тест: пустое описание
+	if err := ValidateDescription(""); err == nil {
+		t.Error("Expected error for empty description")
+	}
+
+	// Тест: описание на границе максимальной длины
+	maxDesc := string(make([]byte, MaxDescriptionLength))
+	if err := ValidateDescription(maxDesc); err != nil {
+		t.Errorf("Expected no error for description at max length, got %v", err)
+	}
+
+	// Тест: описание превышает максимальную длину
+	tooLongDesc := string(make([]byte, MaxDescriptionLength+1))
+	if err := ValidateDescription(tooLongDesc); err == nil {
+		t.Error("Expected error for description exceeding max length")
+	}
+}
+
+func TestAddValidation(t *testing.T) {
+	tasks := []Task{}
+
+	// Тест: добавление с пустым описанием
+	_, err := Add(tasks, "")
+	if err == nil {
+		t.Error("Expected error for empty description")
+	}
+
+	// Тест: добавление с описанием превышающим максимальную длину
+	tooLongDesc := string(make([]byte, MaxDescriptionLength+1))
+	_, err = Add(tasks, tooLongDesc)
+	if err == nil {
+		t.Error("Expected error for description exceeding max length")
+	}
+}
+
+func TestCompleteValidation(t *testing.T) {
+	tasks := []Task{
+		{ID: 1, Description: "Task 1", Done: false},
+	}
+
+	// Тест: валидный ID
+	_, err := Complete(tasks, 1)
+	if err != nil {
+		t.Errorf("Unexpected error for valid ID: %v", err)
+	}
+
+	// Тест: невалидный ID (0)
+	_, err = Complete(tasks, 0)
+	if err == nil {
+		t.Error("Expected error for ID 0")
+	}
+
+	// Тест: невалидный ID (отрицательный)
+	_, err = Complete(tasks, -1)
+	if err == nil {
+		t.Error("Expected error for negative ID")
+	}
+}
+
+func TestDeleteValidation(t *testing.T) {
+	tasks := []Task{
+		{ID: 1, Description: "Task 1", Done: false},
+	}
+
+	// Тест: валидный ID
+	_, err := Delete(tasks, 1)
+	if err != nil {
+		t.Errorf("Unexpected error for valid ID: %v", err)
+	}
+
+	// Тест: невалидный ID (0)
+	_, err = Delete(tasks, 0)
+	if err == nil {
+		t.Error("Expected error for ID 0")
+	}
+
+	// Тест: невалидный ID (отрицательный)
+	_, err = Delete(tasks, -1)
+	if err == nil {
+		t.Error("Expected error for negative ID")
 	}
 }

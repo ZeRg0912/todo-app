@@ -34,8 +34,18 @@ func handleAdd(tasks []todo.Task, args []string) ([]todo.Task, error) {
 		return nil, fmt.Errorf("task description cannot be empty: use --desc flag")
 	}
 
-	newTasks := todo.Add(tasks, *desc)
-	logger.ConsoleSuccess("Task added: %s", *desc)
+	// Fix PowerShell double equals issue: --desc=="text" becomes --desc="=text"
+	descValue := *desc
+	if len(descValue) > 0 && descValue[0] == '=' {
+		descValue = descValue[1:]
+		logger.Debug("Removed leading '=' from description (PowerShell double equals fix)")
+	}
+
+	newTasks, err := todo.Add(tasks, descValue)
+	if err != nil {
+		return nil, fmt.Errorf("cannot add task: %w", err)
+	}
+	logger.ConsoleSuccess("Task added: %s", descValue)
 	return newTasks, nil
 }
 

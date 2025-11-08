@@ -110,6 +110,58 @@ func TestJSONWithSpecialCharacters(t *testing.T) {
 	}
 }
 
+func TestJSONWithUTF8BOM(t *testing.T) {
+	testFile := "bom_test.json"
+	defer os.Remove(testFile)
+
+	tasks := []todo.Task{
+		{ID: 1, Description: "Task 1", Done: false},
+		{ID: 2, Description: "Task 2", Done: true},
+	}
+
+	// Save tasks first
+	err := SaveJSON(testFile, tasks)
+	if err != nil {
+		t.Fatalf("SaveJSON failed: %v", err)
+	}
+
+	// Read the file and prepend UTF-8 BOM
+	data, err := os.ReadFile(testFile)
+	if err != nil {
+		t.Fatalf("Failed to read test file: %v", err)
+	}
+
+	// Create file with BOM
+	bomData := append([]byte{0xEF, 0xBB, 0xBF}, data...)
+	err = os.WriteFile(testFile, bomData, 0644)
+	if err != nil {
+		t.Fatalf("Failed to write BOM file: %v", err)
+	}
+
+	// Load should handle BOM correctly
+	loaded, err := LoadJSON(testFile)
+	if err != nil {
+		t.Fatalf("LoadJSON failed with BOM: %v", err)
+	}
+
+	if len(loaded) != len(tasks) {
+		t.Fatalf("Expected %d tasks, got %d", len(tasks), len(loaded))
+	}
+
+	// Verify data integrity
+	for i, task := range loaded {
+		if task.ID != tasks[i].ID {
+			t.Errorf("Task %d: ID mismatch, expected %d, got %d", i, tasks[i].ID, task.ID)
+		}
+		if task.Description != tasks[i].Description {
+			t.Errorf("Task %d: Description mismatch, expected '%s', got '%s'", i, tasks[i].Description, task.Description)
+		}
+		if task.Done != tasks[i].Done {
+			t.Errorf("Task %d: Done mismatch, expected %t, got %t", i, tasks[i].Done, task.Done)
+		}
+	}
+}
+
 func TestCSVSaveAndLoad(t *testing.T) {
 	testFile := "test_tasks.csv"
 	defer os.Remove(testFile) // Cleanup after test

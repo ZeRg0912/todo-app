@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"todo-app/internal/todo"
 
 	"github.com/ZeRg0912/logger"
@@ -33,7 +34,6 @@ func LoadJSON(path string) ([]todo.Task, error) {
 		return []todo.Task{}, nil
 	}
 
-	// Remove UTF-8 BOM if present (common in Windows)
 	if len(data) >= 3 && data[0] == 0xEF && data[1] == 0xBB && data[2] == 0xBF {
 		data = data[3:]
 		logger.Debug("Removed UTF-8 BOM from JSON file")
@@ -50,25 +50,56 @@ func LoadJSON(path string) ([]todo.Task, error) {
 }
 
 // SaveJSON writes tasks to a JSON file with indentation and logging.
+// Uses atomic write (temp file + rename) to protect data from corruption.
+// Uses file locking to prevent concurrent access conflicts.
 // Returns an error if JSON marshaling or file writing fails.
 func SaveJSON(path string, tasks []todo.Task) error {
+	lock, err := AcquireLock(path)
+	if err != nil {
+		return fmt.Errorf("cannot acquire lock for %s: %w", path, err)
+	}
+	defer lock.Release()
+
 	data, err := json.MarshalIndent(tasks, "", "  ")
 	if err != nil {
 		return fmt.Errorf("cannot marshal tasks to JSON: %w", err)
 	}
 
-	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC|os.O_SYNC, 0644)
+	dir := filepath.Dir(path)
+	if dir == "." {
+		absPath, err := filepath.Abs(path)
+		if err != nil {
+			return fmt.Errorf("cannot get absolute path for %s: %w", path, err)
+		}
+		dir = filepath.Dir(absPath)
+	}
+	tmpFile, err := os.CreateTemp(dir, filepath.Base(path)+".tmp.*")
 	if err != nil {
-		return fmt.Errorf("cannot open file %s: %w", path, err)
+		return fmt.Errorf("cannot create temporary file for %s: %w", path, err)
 	}
-	defer file.Close()
+	tmpPath := tmpFile.Name()
 
-	if _, err := file.Write(data); err != nil {
-		return fmt.Errorf("cannot write to file %s: %w", path, err)
+	defer func() {
+		tmpFile.Close()
+		if _, err := os.Stat(tmpPath); err == nil {
+			os.Remove(tmpPath)
+		}
+	}()
+
+	if _, err := tmpFile.Write(data); err != nil {
+		return fmt.Errorf("cannot write to temporary file %s: %w", tmpPath, err)
 	}
 
-	if err := file.Sync(); err != nil {
-		return fmt.Errorf("cannot sync file %s: %w", path, err)
+	if err := tmpFile.Sync(); err != nil {
+		return fmt.Errorf("cannot sync temporary file %s: %w", tmpPath, err)
+	}
+
+	if err := tmpFile.Close(); err != nil {
+		return fmt.Errorf("cannot close temporary file %s: %w", tmpPath, err)
+	}
+
+	if err := os.Rename(tmpPath, path); err != nil {
+		return fmt.Errorf("cannot rename temporary file to %s: %w", path, err)
 	}
 
 	logger.Info("Successfully saved %d tasks to JSON file: %s", len(tasks), path)

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"todo-app/internal/todo"
@@ -37,7 +38,6 @@ func LoadCSV(path string) ([]todo.Task, error) {
 			if err == io.EOF {
 				break
 			}
-			// Логируем ошибку чтения, но продолжаем парсинг остальных строк
 			skippedCount++
 			logger.Warn("CSV read error at line %d: %v", lineNum+1, err)
 			continue
@@ -45,19 +45,16 @@ func LoadCSV(path string) ([]todo.Task, error) {
 
 		lineNum++
 
-		// Пропускаем заголовок
 		if lineNum == 1 {
 			continue
 		}
 
-		// Проверяем количество полей
 		if len(record) < 3 {
 			skippedCount++
 			logger.Warn("Skipping record at line %d: expected 3 fields, got %d", lineNum, len(record))
 			continue
 		}
 
-		// Парсим ID
 		id, err := strconv.Atoi(strings.TrimSpace(record[0]))
 		if err != nil {
 			skippedCount++
@@ -65,7 +62,6 @@ func LoadCSV(path string) ([]todo.Task, error) {
 			continue
 		}
 
-		// Парсим статус Done
 		done, err := strconv.ParseBool(strings.TrimSpace(record[2]))
 		if err != nil {
 			skippedCount++
@@ -91,21 +87,44 @@ func LoadCSV(path string) ([]todo.Task, error) {
 }
 
 // SaveCSV writes tasks to a CSV file with a header row and logging.
+// Uses atomic write (temp file + rename) to protect data from corruption.
+// Uses file locking to prevent concurrent access conflicts.
 // The CSV format includes columns: ID, Description, Done.
 // Returns an error if file creation or CSV writing fails.
 func SaveCSV(path string, tasks []todo.Task) error {
-	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC|os.O_SYNC, 0644)
+	lock, err := AcquireLock(path)
 	if err != nil {
-		return fmt.Errorf("can't create file on path %s: %w", path, err)
+		return fmt.Errorf("cannot acquire lock for %s: %w", path, err)
 	}
-	defer file.Close()
+	defer lock.Release()
 
-	writer := csv.NewWriter(file)
+	dir := filepath.Dir(path)
+	if dir == "." {
+		absPath, err := filepath.Abs(path)
+		if err != nil {
+			return fmt.Errorf("cannot get absolute path for %s: %w", path, err)
+		}
+		dir = filepath.Dir(absPath)
+	}
+	tmpFile, err := os.CreateTemp(dir, filepath.Base(path)+".tmp.*")
+	if err != nil {
+		return fmt.Errorf("cannot create temporary file for %s: %w", path, err)
+	}
+	tmpPath := tmpFile.Name()
+
+	defer func() {
+		tmpFile.Close()
+		if _, err := os.Stat(tmpPath); err == nil {
+			os.Remove(tmpPath)
+		}
+	}()
+
+	writer := csv.NewWriter(tmpFile)
 
 	header := []string{"ID", "Description", "Done"}
 	err = writer.Write(header)
 	if err != nil {
-		return fmt.Errorf("can't write CSV header: %w", err)
+		return fmt.Errorf("cannot write CSV header: %w", err)
 	}
 
 	successCount := 0
@@ -128,8 +147,16 @@ func SaveCSV(path string, tasks []todo.Task) error {
 		return fmt.Errorf("CSV flush error: %w", err)
 	}
 
-	if err := file.Sync(); err != nil {
-		return fmt.Errorf("cannot sync CSV file %s: %w", path, err)
+	if err := tmpFile.Sync(); err != nil {
+		return fmt.Errorf("cannot sync temporary CSV file %s: %w", tmpPath, err)
+	}
+
+	if err := tmpFile.Close(); err != nil {
+		return fmt.Errorf("cannot close temporary CSV file %s: %w", tmpPath, err)
+	}
+
+	if err := os.Rename(tmpPath, path); err != nil {
+		return fmt.Errorf("cannot rename temporary file to %s: %w", path, err)
 	}
 
 	logger.Info("Successfully exported %d/%d tasks to CSV file: %s", successCount, len(tasks), path)
