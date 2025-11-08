@@ -9,47 +9,40 @@ import (
 	"strings"
 	"todo-app/internal/storage"
 	"todo-app/internal/todo"
+
 	"github.com/ZeRg0912/logger"
 )
 
 // handleAdd processes the add command to create a new task.
 // It expects a --desc flag with the task description.
 // Returns the updated task slice.
-func handleAdd(tasks []todo.Task, args []string) []todo.Task {
+func handleAdd(tasks []todo.Task, args []string) ([]todo.Task, error) {
 	logger.Debug("handleAdd called with %d args", len(args))
 
 	addCmd := flag.NewFlagSet("add", flag.ContinueOnError)
 	desc := addCmd.String("desc", "", "Task description")
 	setupCommandConfig(addCmd)
 
-	if len(args) == 0 {
-		logger.Error("add command requires --desc flag")
-		printCommandUsage("add", addCmd, "add a new task")
-		os.Exit(1)
-	}
-
 	err := addCmd.Parse(args)
 	if err != nil {
-		logger.Error("Invalid arguments: %v", err)
 		printCommandUsage("add", addCmd, "add a new task")
-		os.Exit(1)
+		return nil, fmt.Errorf("invalid arguments: %w", err)
 	}
 
 	if *desc == "" {
-		logger.Error("task description cannot be empty")
 		printCommandUsage("add", addCmd, "add a new task")
-		os.Exit(1)
+		return nil, fmt.Errorf("task description cannot be empty: use --desc flag")
 	}
 
 	newTasks := todo.Add(tasks, *desc)
 	logger.ConsoleSuccess("Task added: %s", *desc)
-	return newTasks
+	return newTasks, nil
 }
 
 // handleList processes the list command to display tasks.
 // Supports --filter flag with values: all, done, pending.
 // Tasks are displayed with status emojis and IDs.
-func handleList(tasks []todo.Task, args []string) {
+func handleList(tasks []todo.Task, args []string) error {
 	logger.Debug("handleList called with %d args", len(args))
 
 	listCmd := flag.NewFlagSet("list", flag.ContinueOnError)
@@ -58,118 +51,99 @@ func handleList(tasks []todo.Task, args []string) {
 
 	err := listCmd.Parse(args)
 	if err != nil {
-		logger.Error("Invalid arguments: %v", err)
 		printCommandUsage("list", listCmd, "list tasks")
-		os.Exit(1)
+		return fmt.Errorf("invalid arguments: %w", err)
 	}
 
 	validFilters := map[string]bool{"all": true, "done": true, "pending": true}
 	if !validFilters[*filter] {
-		logger.Error("invalid filter value '%s'", *filter)
 		printCommandUsage("list", listCmd, "list tasks")
-		os.Exit(1)
+		return fmt.Errorf("invalid filter value '%s'", *filter)
 	}
 
 	filteredTasks := todo.List(tasks, *filter)
 	if len(filteredTasks) == 0 {
 		logger.Info("No tasks found with filter '%s'", *filter)
 		logger.ConsoleHelp("No tasks found")
-		return
+		return nil
 	}
 
 	logger.Info("Displaying %d tasks with filter '%s'", len(filteredTasks), *filter)
 	logger.ConsoleHelpf("Task list (%s):", *filter)
 	for _, task := range filteredTasks {
-		status := "❌"
+		status := "[ ]"
 		if task.Done {
-			status = "✅"
+			status = "[X]"
 		}
 		logger.ConsoleHelpf("%s [ID:%d] %s", status, task.ID, task.Description)
 	}
+	return nil
 }
 
 // handleComplete processes the complete command to mark a task as done.
 // It expects a --id flag with the task ID to complete.
 // Returns the updated task slice.
-func handleComplete(tasks []todo.Task, args []string) []todo.Task {
+func handleComplete(tasks []todo.Task, args []string) ([]todo.Task, error) {
 	logger.Debug("handleComplete called with %d args", len(args))
 
 	completeCmd := flag.NewFlagSet("complete", flag.ContinueOnError)
 	id := completeCmd.Int("id", 0, "Task ID to mark as completed")
 	setupCommandConfig(completeCmd)
 
-	if len(args) == 0 {
-		logger.Error("complete command requires --id flag")
-		printCommandUsage("complete", completeCmd, "mark task as completed")
-		os.Exit(1)
-	}
-
 	err := completeCmd.Parse(args)
 	if err != nil {
-		logger.Error("Invalid arguments: %v", err)
 		printCommandUsage("complete", completeCmd, "mark task as completed")
-		os.Exit(1)
+		return nil, fmt.Errorf("invalid arguments: %w", err)
 	}
 
 	if *id == 0 {
-		logger.Error("task ID is required and must be greater than 0")
 		printCommandUsage("complete", completeCmd, "mark task as completed")
-		os.Exit(1)
+		return nil, fmt.Errorf("task ID is required and must be greater than 0")
 	}
 
 	resultTasks, err := todo.Complete(tasks, *id)
 	if err != nil {
-		logger.Error("cannot complete task %d: %v", *id, err)
-		os.Exit(1)
+		return nil, fmt.Errorf("cannot complete task %d: %w", *id, err)
 	}
 
 	logger.ConsoleSuccess("Task %d marked as completed", *id)
-	return resultTasks
+	return resultTasks, nil
 }
 
 // handleDelete processes the delete command to remove a task.
 // It expects a --id flag with the task ID to delete.
 // Returns the updated task slice.
-func handleDelete(tasks []todo.Task, args []string) []todo.Task {
+func handleDelete(tasks []todo.Task, args []string) ([]todo.Task, error) {
 	logger.Debug("handleDelete called with %d args", len(args))
 
 	deleteCmd := flag.NewFlagSet("delete", flag.ContinueOnError)
 	id := deleteCmd.Int("id", 0, "Task ID to delete")
 	setupCommandConfig(deleteCmd)
 
-	if len(args) == 0 {
-		logger.Error("delete command requires --id flag")
-		printCommandUsage("delete", deleteCmd, "delete a task")
-		os.Exit(1)
-	}
-
 	err := deleteCmd.Parse(args)
 	if err != nil {
-		logger.Error("Invalid arguments: %v", err)
 		printCommandUsage("delete", deleteCmd, "delete a task")
-		os.Exit(1)
+		return nil, fmt.Errorf("invalid arguments: %w", err)
 	}
 
 	if *id == 0 {
-		logger.Error("task ID is required and must be greater than 0")
 		printCommandUsage("delete", deleteCmd, "delete a task")
-		os.Exit(1)
+		return nil, fmt.Errorf("task ID is required and must be greater than 0")
 	}
 
 	resultTasks, err := todo.Delete(tasks, *id)
 	if err != nil {
-		logger.Error("cannot delete task %d: %v", *id, err)
-		os.Exit(1)
+		return nil, fmt.Errorf("cannot delete task %d: %w", *id, err)
 	}
 
 	logger.ConsoleSuccess("Task %d deleted", *id)
-	return resultTasks
+	return resultTasks, nil
 }
 
 // handleExport processes the export command to save tasks to a file.
 // Supports --format flag (json or csv) and --out flag for output file.
 // Automatically adds file extension if not specified.
-func handleExport(tasks []todo.Task, args []string) {
+func handleExport(tasks []todo.Task, args []string) error {
 	logger.Debug("handleExport called with %d args", len(args))
 
 	exportCmd := flag.NewFlagSet("export", flag.ContinueOnError)
@@ -177,27 +151,18 @@ func handleExport(tasks []todo.Task, args []string) {
 	outFile := exportCmd.String("out", "tasks_export", "Output file")
 	setupCommandConfig(exportCmd)
 
-	if len(args) == 0 {
-		logger.Error("export command requires --format and --out flags")
-		printCommandUsage("export", exportCmd, "export tasks to file")
-		os.Exit(1)
-	}
-
 	err := exportCmd.Parse(args)
 	if err != nil {
-		logger.Error("Invalid arguments: %v", err)
 		printCommandUsage("export", exportCmd, "export tasks to file")
-		os.Exit(1)
+		return fmt.Errorf("invalid arguments: %w", err)
 	}
 
 	validFormats := map[string]bool{"json": true, "csv": true}
 	if !validFormats[*format] {
-		logger.Error("invalid format '%s'", *format)
 		printCommandUsage("export", exportCmd, "export tasks to file")
-		os.Exit(1)
+		return fmt.Errorf("invalid format '%s'", *format)
 	}
 
-	// Add file extension if not specified
 	if !strings.HasSuffix(*outFile, "."+*format) {
 		*outFile = *outFile + "." + *format
 	}
@@ -210,19 +175,19 @@ func handleExport(tasks []todo.Task, args []string) {
 	}
 
 	if err != nil {
-		logger.Error("export error: %v", err)
-		os.Exit(1)
+		return fmt.Errorf("export error: %w", err)
 	}
 
 	logger.Info("Tasks exported to %s", *outFile)
 	logger.ConsoleHelpf("Tasks exported to %s", *outFile)
+	return nil
 }
 
 // handleLoad processes the load command to import tasks from a file.
 // It expects a --file flag with the path to import from.
 // Supports JSON and CSV formats based on file extension.
-// Returns the imported tasks slice.
-func handleLoad(args []string) []todo.Task {
+// Returns the imported tasks slice and error if any.
+func handleLoad(args []string) ([]todo.Task, error) {
 	logger.Debug("handleLoad called with %d args", len(args))
 
 	loadCmd := flag.NewFlagSet("load", flag.ContinueOnError)
@@ -230,32 +195,33 @@ func handleLoad(args []string) []todo.Task {
 	setupCommandConfig(loadCmd)
 
 	if len(args) == 0 {
-		logger.Error("load command requires --file flag")
-		printCommandUsage("load", loadCmd, "import tasks from file")
-		os.Exit(1)
+		return nil, fmt.Errorf("load command requires --file flag: specify file to import")
 	}
 
 	err := loadCmd.Parse(args)
 	if err != nil {
-		logger.Error("Invalid arguments: %v", err)
-		printCommandUsage("load", loadCmd, "import tasks from file")
-		os.Exit(1)
+		return nil, fmt.Errorf("invalid arguments: %w", err)
 	}
 
 	if *file == "" {
-		logger.Error("import file is required")
-		printCommandUsage("load", loadCmd, "import tasks from file")
-		os.Exit(1)
+		return nil, fmt.Errorf("import file is required")
 	}
 
 	if _, err := os.Stat(*file); os.IsNotExist(err) {
-		logger.Error("file does not exist: %s", *file)
-		os.Exit(1)
+		if _, err := os.Stat(*file + ".csv"); err == nil {
+			*file = *file + ".csv"
+		} else if _, err := os.Stat(*file + ".json"); err == nil {
+			*file = *file + ".json"
+		} else {
+			return nil, fmt.Errorf("file does not exist: %s", *file)
+		}
 	}
 
 	// Determine format by file extension
 	ext := strings.ToLower(filepath.Ext(*file))
 	var importedTasks []todo.Task
+
+	logger.Info("Starting import from file: %s (format: %s)", *file, ext)
 
 	switch ext {
 	case ".json":
@@ -263,18 +229,16 @@ func handleLoad(args []string) []todo.Task {
 	case ".csv":
 		importedTasks, err = storage.LoadCSV(*file)
 	default:
-		logger.Error("unsupported file format: %s", ext)
-		os.Exit(1)
+		return nil, fmt.Errorf("unsupported file format: %s", ext)
 	}
 
 	if err != nil {
-		logger.Error("import error: %v", err)
-		os.Exit(1)
+		return nil, fmt.Errorf("import error: %w", err)
 	}
 
 	logger.Info("Successfully imported %d tasks from %s", len(importedTasks), *file)
 	logger.ConsoleHelpf("Successfully imported %d tasks from %s", len(importedTasks), *file)
-	return importedTasks
+	return importedTasks, nil
 }
 
 // printCommandUsage displays formatted help for a specific command.

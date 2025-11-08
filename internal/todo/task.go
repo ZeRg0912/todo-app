@@ -8,6 +8,6 @@ package todo
 // Done indicates whether the task has been completed.
 type Task struct {
 	ID          int    `json:"id"`
-	Description string `json:"description:"`
+	Description string `json:"description"`
 	Done        bool   `json:"done"`
 }

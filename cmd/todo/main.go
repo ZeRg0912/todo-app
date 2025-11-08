@@ -6,6 +6,7 @@ import (
 
 	"todo-app/internal/storage"
 	"todo-app/internal/todo"
+
 	"github.com/ZeRg0912/logger"
 )
 
@@ -63,17 +64,42 @@ func main() {
 	// All available commands
 	switch command {
 	case "add":
-		resultTasks = handleAdd(tasks, args)
+		resultTasks, err = handleAdd(tasks, args)
+		if err != nil {
+			logger.Error("Add failed: %v", err)
+			os.Exit(1)
+		}
 	case "list":
-		handleList(tasks, args)
+		err := handleList(tasks, args)
+		if err != nil {
+			logger.Error("List failed: %v", err)
+			os.Exit(1)
+		}
 	case "complete":
-		resultTasks = handleComplete(tasks, args)
+		resultTasks, err = handleComplete(tasks, args)
+		if err != nil {
+			logger.Error("Complete failed: %v", err)
+			os.Exit(1)
+		}
 	case "delete":
-		resultTasks = handleDelete(tasks, args)
+		resultTasks, err = handleDelete(tasks, args)
+		if err != nil {
+			logger.Error("Delete failed: %v", err)
+			os.Exit(1)
+		}
 	case "export":
-		handleExport(tasks, args)
+		err := handleExport(tasks, args)
+		if err != nil {
+			logger.Error("Export failed: %v", err)
+			os.Exit(1)
+		}
 	case "load":
-		resultTasks = handleLoad(args)
+		importedTasks, err := handleLoad(args)
+		if err != nil {
+			logger.Error("Load failed: %v", err)
+			os.Exit(1)
+		}
+		resultTasks = importedTasks
 	case "help", "-h", "--help":
 		printUsage()
 	default:

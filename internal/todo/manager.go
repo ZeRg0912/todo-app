@@ -2,7 +2,9 @@
 // CRUD operations, filtering, and import/export capabilities.
 package todo
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // Add creates a new task and appends it to the task list.
 // Generates a unique ID by finding the maximum existing ID and incrementing it.
@@ -32,7 +34,7 @@ func List(tasks []Task, filter string) []Task {
 	case "pending":
 		var result []Task
 		for _, task := range tasks {
-			if task.Done {
+			if !task.Done {
 				result = append(result, task)
 			}
 		}
@@ -50,7 +52,7 @@ func List(tasks []Task, filter string) []Task {
 func Complete(tasks []Task, id int) ([]Task, error) {
 	index := findTaskByID(tasks, id)
 	if index == -1 {
-		return tasks, fmt.Errorf("task with input ID = %d not found", id)
+		return tasks, fmt.Errorf("task with ID %d not found", id)
 	}
 	tasks[index].Done = true
 	return tasks, nil
@@ -62,7 +64,7 @@ func Complete(tasks []Task, id int) ([]Task, error) {
 func Delete(tasks []Task, id int) ([]Task, error) {
 	index := findTaskByID(tasks, id)
 	if index == -1 {
-		return tasks, fmt.Errorf("task with input ID = %d not found", id)
+		return tasks, fmt.Errorf("task with ID %d not found", id)
 	}
 
 	return append(tasks[:index], tasks[index+1:]...), nil
